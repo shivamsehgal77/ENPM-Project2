@@ -1,5 +1,6 @@
 import pygame
 import sys
+import robot_move as robot
 
 from queue import PriorityQueue
 
@@ -29,54 +30,7 @@ pygame.draw.polygon(screen, red, points_triangle)
 pygame.draw.polygon(screen, red, points_hexgon)
 pixel_color = (0, 0,255) # Red
 
-# Move the robot up
-def robot_move_up(robot):
-    x,y=robot
-    robot=(x,y-1)
-    cost=1
-    return cost,robot
-# Move the robot down
-def robot_move_down(robot):
-    x,y=robot
-    robot=(x,y+1)
-    cost=1
-    return cost,robot
-# Move the robot left
-def robot_move_left(robot):
-    x,y=robot
-    robot=(x-1,y)
-    cost=1
-    return cost,robot
-# Move the robot right
-def robot_move_right(robot):
-    x,y=robot
-    robot=(x+1,y)
-    cost=1
-    return cost,robot
-# Move the robot up left
-def robot_move_up_left(robot):
-    x,y=robot
-    robot=(x-1,y-1)
-    cost=1.4
-    return cost,robot
-# Move the robot up right
-def robot_move_up_right(robot):
-    x,y=robot
-    robot=(x+1,y-1)
-    cost=1.4
-    return cost,robot
-# Move the robot down left
-def robot_move_down_left(robot):
-    x,y=robot
-    robot=(x-1,y+1)
-    cost=1.4
-    return cost,robot
-# Move thr robot down right
-def robot_move_down_right(robot):
-    x,y=robot
-    robot=(x+1,y+1)
-    cost=1.4
-    return cost,robot
+
 
 blue = (0, 0, 255)
 
@@ -85,8 +39,8 @@ while True:
     try:
         start_x=int(input("Enter the starting x coordinate \n"))    
         start_y=int(input("Enter the starting ycoordinate \n"))    
-        goal_x=int(input("Enter the starting x coordinate \n"))    
-        goal_y=int(input("Enter the starting ycoordinate \n"))    
+        goal_x=int(input("Enter the goal coordinate \n"))    
+        goal_y=int(input("Enter the goal ycoordinate \n"))    
         robot_start_position=(start_x,250-start_y)
         robot_goal_position=(goal_x,250-goal_y)
         if screen.get_at(robot_start_position) != white and screen.get_at(robot_goal_position)!=white:
@@ -99,18 +53,40 @@ while True:
 
 # robot_goal_position=(550,30)
 
+
+
 ctc_node=0  # cost to come for start node
 parent_node_index=None # Index for the parent node
 node_index=0 # Index of the current node
 closed_list={} # list to store information about the current node
+check_closed_list={}
 open_list=PriorityQueue() # list the store nodes and pop them according to priority
 info=[ctc_node,node_index,parent_node_index,robot_start_position] # list to save all info of a node
 open_list.put(info)
+
+
+def new_node(ctc_move,new_pos):
+    if screen.get_at(new_pos) == white:
+        if not (new_pos in check_closed_list.values()):
+            if not any(items[3] == new_pos for items in open_list.queue):
+                ctc_node_left = ctc_move + info[0]
+                global node_index
+                node_index += 1
+                info_left = [ctc_node_left, node_index, info[1], new_pos]
+                open_list.put(info_left)
+            else:
+                index = next(i for i, [_, _, _, (x, y)] in enumerate(open_list.queue) if (x, y) == new_pos)
+                if round(open_list.queue[index][0], 1) > round(ctc_move + info[0], 1):
+                    open_list.queue[index][0] = ctc_move + info[0]
+                    open_list.queue[index][2] = info[1]
+    
 
 while True:
     # if the open list is empty means that no solution could be found
     if(open_list.empty()):
         print("No solution")
+        goal_node=None
+        break
 
     info=open_list.get()
     # if the goal positoin is reached 
@@ -122,168 +98,82 @@ while True:
         break
 
     # making the node for the new postion and adding to priority queue
-    ctc_move,new_pos=robot_move_left(info[3])
+    ctc_move,new_pos=robot.robot_move_left(info[3])
     if(new_pos==robot_goal_position):
         print("goal reached")
         closed_list[node_index+1]=[ctc_move+info[0],info[2],new_pos]
         goal_node=node_index+1
         break
-    if screen.get_at(new_pos) == white:
-        if not any(lst[2] == new_pos for lst in closed_list.values()):
-            if not any(items[3] == new_pos for items in open_list.queue):
-                ctc_node_left = ctc_move + info[0]
-                node_index += 1
-                info_left = [ctc_node_left, node_index, info[1], new_pos]
-                open_list.put(info_left)
-            else:
-                index = next(i for i, [_, _, _, (x, y)] in enumerate(open_list.queue) if (x, y) == new_pos)
-                if round(open_list.queue[index][0], 1) > round(ctc_move + info[0], 1):
-                    open_list.queue[index][0] = ctc_move + info[0]
-                    open_list.queue[index][2] = info[1]              
+    new_node(ctc_move,new_pos)             
 
     # making the node for the new postion and adding to priority queue
-    ctc_move,new_pos=robot_move_up(info[3])
+    ctc_move,new_pos=robot.robot_move_up(info[3])
     if(new_pos==robot_goal_position):
         print("goal reached")
         closed_list[node_index+1]=[ctc_move+info[0],info[2],new_pos]
         goal_node=node_index+1
         break
-    if screen.get_at(new_pos) == white:
-        if not any(lst[2] == new_pos for lst in closed_list.values()):
-            if not any(items[3] == new_pos for items in open_list.queue):
-                ctc_node_up = ctc_move + info[0]
-                node_index += 1
-                info_left = [ctc_node_up, node_index, info[1], new_pos]
-                open_list.put(info_left)
-            else:
-                index = next(i for i, [_, _, _, (x, y)] in enumerate(open_list.queue) if (x, y) == new_pos)
-                if round(open_list.queue[index][0], 1) > round(ctc_move + info[0], 1):
-                    open_list.queue[index][0] = ctc_move + info[0]
-                    open_list.queue[index][2] = info[1]
+    new_node(ctc_move,new_pos)
                             
     # making the node for the new postion and adding to priority queue                        
-    ctc_move,new_pos=robot_move_right(info[3])
+    ctc_move,new_pos=robot.robot_move_right(info[3])
     if(new_pos==robot_goal_position):
         print("goal reached")
         closed_list[node_index+1]=[ctc_move+info[0],info[2],new_pos]
         goal_node=node_index+1
         break
-    if screen.get_at(new_pos) == white:
-        if not any(lst[2] == new_pos for lst in closed_list.values()):
-            if not any(items[3] == new_pos for items in open_list.queue):
-                ctc_node_right = ctc_move + info[0]
-                node_index += 1
-                info_left = [ctc_node_right, node_index, info[1], new_pos]
-                open_list.put(info_left)
-            else:
-                index = next(i for i, [_, _, _, (x, y)] in enumerate(open_list.queue) if (x, y) == new_pos)
-                if round(open_list.queue[index][0], 1) > round(ctc_move + info[0], 1):
-                    open_list.queue[index][0] = ctc_move + info[0]
-                    open_list.queue[index][2] = info[1]
+    new_node(ctc_move,new_pos)
                             
                             
     # making the node for the new postion and adding to priority queue  
-    ctc_move,new_pos=robot_move_down(info[3])
+    ctc_move,new_pos=robot.robot_move_down(info[3])
     if(new_pos==robot_goal_position):
         print("goal reached")
         closed_list[node_index+1]=[ctc_move+info[0],info[2],new_pos]
         goal_node=node_index+1
         break
-    if screen.get_at(new_pos) == white:
-        if not any(lst[2] == new_pos for lst in closed_list.values()):
-            if not any(items[3] == new_pos for items in open_list.queue):
-                ctc_node_down = ctc_move + info[0]
-                node_index += 1
-                info_left = [ctc_node_down, node_index, info[1], new_pos]
-                open_list.put(info_left)
-            else:
-                index = next(i for i, [_, _, _, (x, y)] in enumerate(open_list.queue) if (x, y) == new_pos)
-                if round(open_list.queue[index][0], 1) > round(ctc_move + info[0], 1):
-                    open_list.queue[index][0] = ctc_move + info[0]
-                    open_list.queue[index][2] = info[1]
+    new_node(ctc_move,new_pos)
                             
     # making the node for the new postion and adding to priority queue
-    ctc_move,new_pos=robot_move_down_left(info[3])
+    ctc_move,new_pos=robot.robot_move_down_left(info[3])
     if(new_pos==robot_goal_position):
         print("goal reached")
         closed_list[node_index+1]=[ctc_move+info[0],info[2],new_pos]
         goal_node=node_index+1
         break
-    if screen.get_at(new_pos) == white:
-        if not any(lst[2] == new_pos for lst in closed_list.values()):
-            if not any(items[3] == new_pos for items in open_list.queue):
-                ctc_node_dl = ctc_move + info[0]
-                node_index += 1
-                info_left = [ctc_node_dl, node_index, info[1], new_pos]
-                open_list.put(info_left)
-            else:
-                index = next(i for i, [_, _, _, (x, y)] in enumerate(open_list.queue) if (x, y) == new_pos)
-                if round(open_list.queue[index][0], 1) > round(ctc_move + info[0], 1):
-                    open_list.queue[index][0] = ctc_move + info[0]
-                    open_list.queue[index][2] = info[1]
+    new_node(ctc_move,new_pos)
                             
     # making the node for the new postion and adding to priority queue
-    ctc_move,new_pos=robot_move_down_right(info[3])
+    ctc_move,new_pos=robot.robot_move_down_right(info[3])
     if(new_pos==robot_goal_position):
         print("goal reached")
         closed_list[node_index+1]=[ctc_move+info[0],info[2],new_pos]
         goal_node=node_index+1
         break
-    if screen.get_at(new_pos) == white:
-        if not any(lst[2] == new_pos for lst in closed_list.values()):
-            if not any(items[3] == new_pos for items in open_list.queue):
-                ctc_node_dr = ctc_move + info[0]
-                node_index += 1
-                info_left = [ctc_node_dr, node_index, info[1], new_pos]
-                open_list.put(info_left)
-            else:
-                index = next(i for i, [_, _, _, (x, y)] in enumerate(open_list.queue) if (x, y) == new_pos)
-                if round(open_list.queue[index][0], 1) > round(ctc_move + info[0], 1):
-                    open_list.queue[index][0] = ctc_move + info[0]
-                    open_list.queue[index][2] = info[1]
+    new_node(ctc_move,new_pos)
                             
     # making the node for the new postion and adding to priority queue
-    ctc_move,new_pos=robot_move_up_left(info[3])
+    ctc_move,new_pos=robot.robot_move_up_left(info[3])
     if(new_pos==robot_goal_position):
         print("goal reached")
         closed_list[node_index+1]=[ctc_move+info[0],info[2],new_pos]
         goal_node=node_index+1
         break
-    if screen.get_at(new_pos) == white:
-        if not any(lst[2] == new_pos for lst in closed_list.values()):
-            if not any(items[3] == new_pos for items in open_list.queue):
-                ctc_node_ul = ctc_move + info[0]
-                node_index += 1
-                info_left = [ctc_node_ul, node_index, info[1], new_pos]
-                open_list.put(info_left)
-            else:
-                index = next(i for i, [_, _, _, (x, y)] in enumerate(open_list.queue) if (x, y) == new_pos)
-                if round(open_list.queue[index][0], 1) > round(ctc_move + info[0], 1):
-                    open_list.queue[index][0] = ctc_move + info[0]
-                    open_list.queue[index][2] = info[1]
+    new_node(ctc_move,new_pos)
                             
     # making the node for the new postion and adding to priority queue
-    ctc_move,new_pos=robot_move_up_right(info[3])
+    ctc_move,new_pos=robot.robot_move_up_right(info[3])
     if(new_pos==robot_goal_position):
         print("goal reached")
         closed_list[node_index+1]=[ctc_move+info[0],info[2],new_pos]
         goal_node=node_index+1
         break
-    if screen.get_at(new_pos) == white:
-        if not any(lst[2] == new_pos for lst in closed_list.values()):
-            if not any(items[3] == new_pos for items in open_list.queue):
-                ctc_node_ur = ctc_move + info[0]
-                node_index += 1
-                info_left = [ctc_node_ur, node_index, info[1], new_pos]
-                open_list.put(info_left)
-            else:
-                index = next(i for i, [_, _, _, (x, y)] in enumerate(open_list.queue) if (x, y) == new_pos)
-                if round(open_list.queue[index][0], 1) > round(ctc_move + info[0], 1):
-                    open_list.queue[index][0] = ctc_move + info[0]
-                    open_list.queue[index][2] = info[1]
+    new_node(ctc_move,new_pos)
                             
     # append the node to node list                                               
     closed_list[info[1]]=[info[0],info[2],info[3]]
+    check_closed_list[info[1]]=info[3]
+
     print(f"Closed_list{info[1]}]",closed_list[info[1]])
     # screen.set_at(info[3], black)
     
@@ -301,19 +191,17 @@ for values in closed_list.values():
 
 # Find the path form start to goal
 path = []
-current_node = goal_node
-while goal_node is not None:
-    goal_node_parent = closed_list[goal_node][1]
-    path.append(closed_list[goal_node][2])
-    screen_display.set_at(closed_list[goal_node][2], green)
-    goal_node=goal_node_parent
-    pygame.display.update()
-    
-
-
-# reverse the path list to get the correct order of nodes
-path.reverse()
-print("****** The optimum path is ****",path)
+if goal_node!=None:
+    current_node = goal_node
+    while goal_node is not None:
+        goal_node_parent = closed_list[goal_node][1]
+        path.append(closed_list[goal_node][2])
+        screen_display.set_at(closed_list[goal_node][2], green)
+        goal_node=goal_node_parent
+        pygame.display.update()
+    # reverse the path list to get the correct order of nodes
+    path.reverse()
+    print("****** The optimum path is ****",path)
 
 
 # opens the screen
